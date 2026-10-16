@@ -179,13 +179,15 @@
   /* FAB (Floating Action Button) - Mobile */
   .fab {
     display: none;
-    position: fixed; bottom: calc(20px + var(--safe-bottom)); right: 20px;
+    position: fixed; bottom: calc(80px + var(--safe-bottom)); right: 20px;
     width: 56px; height: 56px; border-radius: 50%;
     background: var(--accent2); color: #fff; border: none;
     font-size: 28px; line-height: 1; cursor: pointer;
     box-shadow: 0 4px 16px rgba(31,111,235,.4);
     z-index: 200; -webkit-tap-highlight-color: transparent;
+    transition: opacity .2s, transform .2s;
   }
+  .fab.hidden { opacity: 0; pointer-events: none; transform: scale(.8); }
   @media (max-width: 768px) {
     .fab { display: flex; align-items: center; justify-content: center; }
     .add-task-header-btn { display: none; }
@@ -877,10 +879,12 @@ function closeModal() {
 function openBottomSheet() {
   els.bottomSheetOverlay.classList.add('open');
   els.bottomSheet.classList.add('open');
+  els.fabBtn.classList.add('hidden');
 }
 function closeBottomSheet() {
   els.bottomSheetOverlay.classList.remove('open');
   els.bottomSheet.classList.remove('open');
+  els.fabBtn.classList.remove('hidden');
 }
 
 // ====== Event Listeners ======
