@@ -406,7 +406,12 @@
     <main>
       <div class="content-header">
         <h2 id="currentViewTitle">Tüm Görevler</h2>
-        <button class="btn btn-primary add-task-header-btn" id="addTaskBtn">+ Görev Ekle</button>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="btn btn-secondary btn-sm" id="exportBtn">Dışa Aktar</button>
+          <button class="btn btn-secondary btn-sm" id="importBtn">İçe Aktar</button>
+          <input type="file" id="importFile" accept=".json" style="display:none;">
+          <button class="btn btn-primary add-task-header-btn" id="addTaskBtn">+ Görev Ekle</button>
+        </div>
       </div>
       <div class="task-grid" id="taskGrid"></div>
       <div class="empty-state" id="emptyState" style="display:none;">
@@ -548,6 +553,9 @@ const els = {
   currentViewTitle: $('currentViewTitle'),
   addTaskBtn: $('addTaskBtn'),
   fabBtn: $('fabBtn'),
+  exportBtn: $('exportBtn'),
+  importBtn: $('importBtn'),
+  importFile: $('importFile'),
   statTotal: $('statTotal'),
   statDone: $('statDone'),
   statPending: $('statPending'),
@@ -926,6 +934,43 @@ els.searchInput.addEventListener('input', () => {
 
 els.addTaskBtn.onclick = () => openTaskModal();
 els.fabBtn.onclick = () => openTaskModal();
+
+// Export / Import
+els.exportBtn.onclick = () => {
+  const data = JSON.stringify({ tasks: state.tasks, groups: state.groups }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'gorev-yedek-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Yedek indirildi', 'success');
+};
+
+els.importBtn.onclick = () => els.importFile.click();
+els.importFile.onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.tasks || !Array.isArray(data.tasks)) throw new Error('Geçersiz dosya');
+      if (confirm(`Mevcut ${data.tasks.length} görev yüklensin mi? (Mevcut veriler silinir)`)) {
+        state.tasks = data.tasks;
+        state.groups = data.groups || ['Genel'];
+        saveState();
+        render();
+        showToast('Yedek yüklendi', 'success');
+      }
+    } catch (err) {
+      showToast('Dosya okunamadı: ' + err.message, 'error');
+    }
+    els.importFile.value = '';
+  };
+  reader.readAsText(file);
+};
 
 function openTaskModal() {
   editingTaskId = null;
