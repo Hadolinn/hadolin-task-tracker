@@ -44,35 +44,56 @@
     position: sticky; top: 0; z-index: 100;
     padding-top: calc(14px + var(--safe-top));
   }
-  .header h1 { font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
+  .header h1 { font-size: 1.2rem; display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
   .header .logo { width: 36px; height: 36px; flex-shrink: 0; }
   .header-actions { display: flex; align-items: center; gap: 8px; }
 
-  /* Header icon buttons */
-  .header-icon-btn {
+  /* Hamburger button */
+  .hamburger-btn {
     width: 40px; height: 40px; border-radius: 10px;
     background: var(--bg3); border: 1px solid var(--border);
-    color: var(--text2); cursor: pointer;
+    color: var(--text); cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    transition: background .15s, color .15s;
+    transition: background .15s;
     -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
   }
-  .header-icon-btn:active { background: var(--border); color: var(--text); }
-  .header-icon-btn.active { color: var(--accent); border-color: var(--accent); }
-  .header-icon-btn svg { width: 20px; height: 20px; }
+  .hamburger-btn:active { background: var(--border); }
+  .hamburger-btn svg { width: 22px; height: 22px; }
 
-  /* Dropdown panels */
-  .dropdown-panel {
-    position: absolute; top: 100%; right: 0;
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 16px;
-    width: 300px; max-width: 90vw;
-    box-shadow: 0 8px 32px rgba(0,0,0,.4);
-    display: none; z-index: 200;
-    margin-top: 8px;
+  /* Drawer */
+  .drawer {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: 300px; max-width: 85vw;
+    background: var(--bg2); border-right: 1px solid var(--border);
+    z-index: 901; transform: translateX(-100%);
+    transition: transform .25s ease;
+    overflow-y: auto;
+    padding: 20px;
+    padding-top: calc(20px + var(--safe-top));
+    padding-bottom: calc(20px + var(--safe-bottom));
+    display: flex; flex-direction: column; gap: 20px;
   }
-  .dropdown-panel.open { display: block; }
-  .dropdown-panel h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--text2); margin-bottom: 12px; }
+  .drawer.open { transform: translateX(0); }
+
+  .drawer-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 16px; border-bottom: 1px solid var(--border);
+  }
+  .drawer-header h2 { font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+  .drawer-header h2 svg { width: 24px; height: 24px; color: var(--accent); }
+  .drawer-close {
+    background: none; border: none; color: var(--text2); cursor: pointer;
+    font-size: 28px; line-height: 1; width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+  }
+  .drawer-close:active { background: var(--bg3); }
+
+  .drawer-section h3 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
+    color: var(--text2); margin-bottom: 12px;
+  }
 
   .group-list { display: flex; flex-direction: column; gap: 4px; }
   .group-item {
@@ -106,6 +127,19 @@
     position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
     color: var(--text2); width: 18px; height: 18px;
   }
+
+  /* Drawer action buttons */
+  .drawer-actions { display: flex; flex-direction: column; gap: 8px; }
+  .drawer-action-btn {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; border-radius: 10px;
+    background: var(--bg3); border: 1px solid var(--border);
+    color: var(--text); font-size: 14px; cursor: pointer;
+    transition: background .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .drawer-action-btn:active { background: var(--border); }
+  .drawer-action-btn svg { width: 18px; height: 18px; color: var(--text2); }
 
   /* Stats bar (top of main) */
   .stats-bar {
@@ -324,19 +358,22 @@
   .empty-state h3 { font-size: 1.2rem; margin-bottom: 10px; }
   .empty-state p { font-size: 15px; line-height: 1.5; }
 
-  /* Overlay for closing dropdowns */
-  .dropdown-overlay {
-    position: fixed; inset: 0; z-index: 150; display: none;
+  /* Overlay for drawer */
+  .drawer-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5);
+    z-index: 900; opacity: 0; pointer-events: none;
+    transition: opacity .25s ease;
   }
-  .dropdown-overlay.open { display: block; }
+  .drawer-overlay.open { opacity: 1; pointer-events: auto; }
 </style>
 </head>
 <body>
 
 <div class="toast-container" id="toasts"></div>
-<div class="dropdown-overlay" id="dropdownOverlay"></div>
-
 <div class="header">
+  <button class="hamburger-btn" id="hamburgerBtn" aria-label="Menü">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1 2.75A.75.75 0 0 1 1.75 2h12.5a.75.75 0 0 1 0 1.5H1.75A.75.75 0 0 1 1 2.75Zm0 5A.75.75 0 0 1 1.75 7h12.5a.75.75 0 0 1 0 1.5H1.75A.75.75 0 0 1 1 7.75ZM1.75 12h12.5a.75.75 0 0 1 0 1.5H1.75a.75.75 0 0 1 0-1.5Z"/></svg>
+  </button>
   <h1>
     <svg class="logo" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect width="48" height="48" rx="10" fill="#1f6feb"/>
@@ -348,35 +385,53 @@
     Görev Takipçisi
   </h1>
   <div class="header-actions">
-    <button class="header-icon-btn" id="searchBtn" aria-label="Ara">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>
-    </button>
-    <button class="header-icon-btn" id="groupsBtn" aria-label="Gruplar">
-      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1.75 2.5a.75.75 0 0 0 0 1.5h12.5a.75.75 0 0 0 0-1.5H1.75Zm0 3a.75.75 0 0 0 0 1.5h8a.75.75 0 0 0 0-1.5h-8Zm0 3a.75.75 0 0 0 0 1.5h4a.75.75 0 0 0 0-1.5h-4Zm0 3a.75.75 0 0 0 0 1.5h2a.75.75 0 0 0 0-1.5h-2Z"/></svg>
-    </button>
-    <button class="btn btn-secondary btn-sm" id="exportBtn">Dışa Aktar</button>
-    <button class="btn btn-secondary btn-sm" id="importBtn">İçe Aktar</button>
-    <input type="file" id="importFile" accept=".json" style="display:none;">
     <button class="btn btn-primary add-task-header-btn" id="addTaskBtn">+ Görev Ekle</button>
   </div>
 </div>
 
-<!-- Search Dropdown -->
-<div class="dropdown-panel" id="searchPanel">
-  <h3>Ara</h3>
-  <div class="search-box">
-    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>
-    <input type="text" id="searchInput" placeholder="Görevlerde ara...">
-  </div>
-</div>
+<!-- Drawer Overlay -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
 
-<!-- Groups Dropdown -->
-<div class="dropdown-panel" id="groupsPanel">
-  <h3>Gruplar</h3>
-  <div class="group-list" id="groupList"></div>
-  <div class="group-add">
-    <input type="text" id="newGroupInput" placeholder="Yeni grup adı..." maxlength="30">
-    <button class="btn btn-primary btn-sm" id="addGroupBtn">Ekle</button>
+<!-- Drawer Panel -->
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <h2>
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 3.25a2.25 2.25 0 1 1 3 2.122v5.256a2.251 2.251 0 1 1-2 0V5.372A2.25 2.25 0 0 1 1.5 3.25Zm5.677-.177L9.573.677A.25.25 0 0 1 10 .854V2.5h1A2.5 2.5 0 0 1 13.5 5v5.628a2.251 2.251 0 1 1-2 0V5a1 1 0 0 0-1-1h-1v1.646a.25.25 0 0 1-.427.177L7.177 3.427a.25.25 0 0 1 0-.354ZM3.75 2.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm0 9.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm8.25.75a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0Z"/></svg>
+      Menü
+    </h2>
+    <button class="drawer-close" id="drawerClose">&times;</button>
+  </div>
+
+  <div class="drawer-section">
+    <h3>Ara</h3>
+    <div class="search-box">
+      <svg viewBox="0 0 16 16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>
+      <input type="text" id="searchInput" placeholder="Görevlerde ara...">
+    </div>
+  </div>
+
+  <div class="drawer-section">
+    <h3>Gruplar</h3>
+    <div class="group-list" id="groupList"></div>
+    <div class="group-add">
+      <input type="text" id="newGroupInput" placeholder="Yeni grup adı..." maxlength="30">
+      <button class="btn btn-primary btn-sm" id="addGroupBtn">Ekle</button>
+    </div>
+  </div>
+
+  <div class="drawer-section">
+    <h3>Yedekleme</h3>
+    <div class="drawer-actions">
+      <button class="drawer-action-btn" id="exportBtn">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.19L5.03 5.72a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 7.94V2.75Z"/><path d="M3.5 9.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 15h6.5A2.75 2.75 0 0 0 14 12.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-2.5Z"/></svg>
+        Dışa Aktar
+      </button>
+      <button class="drawer-action-btn" id="importBtn">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8.75 11.25a.75.75 0 0 0 1.5 0V6.06l2.22 2.22a.75.75 0 0 0 1.06-1.06l-3.5-3.5a.75.75 0 0 0-1.06 0l-3.5 3.5a.75.75 0 0 0 1.06 1.06L8.75 6.06v5.19Z"/><path d="M3.5 9.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 15h6.5A2.75 2.75 0 0 0 14 12.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-2.5Z"/></svg>
+        İçe Aktar
+      </button>
+      <input type="file" id="importFile" accept=".json" style="display:none;">
+    </div>
   </div>
 </div>
 
@@ -482,11 +537,10 @@ let pendingPhotoBase64 = '';
 // ====== DOM Refs ======
 const $ = id => document.getElementById(id);
 const els = {
-  searchBtn: $('searchBtn'),
-  groupsBtn: $('groupsBtn'),
-  searchPanel: $('searchPanel'),
-  groupsPanel: $('groupsPanel'),
-  dropdownOverlay: $('dropdownOverlay'),
+  hamburgerBtn: $('hamburgerBtn'),
+  drawer: $('drawer'),
+  drawerOverlay: $('drawerOverlay'),
+  drawerClose: $('drawerClose'),
   groupList: $('groupList'),
   newGroupInput: $('newGroupInput'),
   addGroupBtn: $('addGroupBtn'),
@@ -569,29 +623,20 @@ async function handlePhotoFile(file) {
   }
 }
 
-// ====== Dropdown Management ======
-function closeAllDropdowns() {
-  els.searchPanel.classList.remove('open');
-  els.groupsPanel.classList.remove('open');
-  els.dropdownOverlay.classList.remove('open');
-  els.searchBtn.classList.remove('active');
-  els.groupsBtn.classList.remove('active');
+// ====== Drawer Management ======
+function openDrawer() {
+  els.drawer.classList.add('open');
+  els.drawerOverlay.classList.add('open');
 }
 
-function toggleDropdown(panel, btn) {
-  const isOpen = panel.classList.contains('open');
-  closeAllDropdowns();
-  if (!isOpen) {
-    panel.classList.add('open');
-    btn.classList.add('active');
-    els.dropdownOverlay.classList.add('open');
-  }
+function closeDrawer() {
+  els.drawer.classList.remove('open');
+  els.drawerOverlay.classList.remove('open');
 }
 
-els.dropdownOverlay.onclick = closeAllDropdowns;
-
-els.searchBtn.onclick = () => toggleDropdown(els.searchPanel, els.searchBtn);
-els.groupsBtn.onclick = () => toggleDropdown(els.groupsPanel, els.groupsBtn);
+els.hamburgerBtn.onclick = openDrawer;
+els.drawerClose.onclick = closeDrawer;
+els.drawerOverlay.onclick = closeDrawer;
 
 // ====== Rendering ======
 function renderGroups() {
@@ -610,7 +655,7 @@ function renderGroups() {
 
   els.groupList.innerHTML = html;
   els.groupList.querySelectorAll('.group-item').forEach(el => {
-    el.onclick = () => { activeGroup = el.dataset.group; closeAllDropdowns(); render(); };
+    el.onclick = () => { activeGroup = el.dataset.group; closeDrawer(); render(); };
   });
 }
 
@@ -925,7 +970,7 @@ els.importFile.onchange = e => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closeModal();
-    closeAllDropdowns();
+    closeDrawer();
     els.lightbox.style.display = 'none';
   }
 });
